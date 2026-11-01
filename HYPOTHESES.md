@@ -4,8 +4,8 @@ Rule: every block gets its hypothesis + predicted outcome **before** the runs, a
 after. Wrong predictions stay in the log. Numbers are LOSO EMD over 24 samples (mean ± std across folds) unless
 "8 folds" is stated. Lower is better.
 
-> **About the timeline.** Block 0 (retrospective) and Block 1 (H1.1–H1.4) were committed to this repository on
-> 2026-10-26, before the tiled runs (commits `26fb175`, `c371eaf`). The final experiments ran in one Kaggle
+> **About the timeline.** Block 0 (retrospective) and Block 1 (H1.1–H1.4) were first committed on 2026-10-26, before
+> the tiled runs, in the earlier repository `dpushkaruk/cv_adv_ass1` (commits `26fb175`, `c371eaf`). The final experiments ran in one Kaggle
 > session on 2026-10-31 (run ids carry timestamps, see `results/cv_results.csv`). H1–H7 were written in
 > `notebooks/cv-v3.ipynb` before their blocks, in the order shown here, but they were committed to git only
 > on 2026-11-01 together with the results, so for them the Kaggle notebook version history is the evidence
@@ -36,14 +36,17 @@ Observation: CV and LB rank the models in opposite order.
 learn device-specific appearance instead of grain size, and the test set is a different device at a different
 px/mm. *Prediction:* with tiles at one common px/mm, CV and LB rank the models the same way, and the LB of the best
 tile model is clearly better than the whole-photo models (< 70).
-**Result: refuted.** The tiled models scored 76.55 (MAE ridge), 83.05 (DINOv2 FT) and 86.73 (EfficientNet-B0
-frozen) on the public LB, none of them below 70, and tiled EfficientNet-B0 (86.7) is worse than whole-photo
-EfficientNet-B0 (73). The CV order (EffB0 39.26 ≈ DINOv2 FT 39.30 < MAE 37.81 within 1.5) does not predict the LB
-order either. **Why:** calibration removed the scale part of the shift, but not the rest. The test photos
-are from unseen devices with different sharpness/noise/colour after resampling (H5, notebook C11: test→train
-feature distance 3.3× the LOSO distance), and the mean-curve baseline itself is 14 EMD worse on the LB than in
-CV (102.4 vs 88.3), so the test *soils* differ as well. Whole-photo models may have scored better on the LB by
-using the whole field of view (more context per prediction), which tiling throws away.
+**Result: mostly refuted.** Eight tiled models were submitted. Only the handcrafted colour/texture model is below
+70 (65.16) and better than whole-photo EfficientNet-B0 (73); every deep tiled model scored 76.6–92.3, and tiled
+EfficientNet-B0 (86.7) is worse than whole-photo EfficientNet-B0 (73). The CV order does not predict the LB order
+(Spearman −0.12 over the 8 models): the two best by CV, ResNet-18 frozen (36.57 → 89.86) and the own ViT from
+scratch (37.40 → 92.31), are the two worst on the LB. **Why:** calibration removed the scale part of the shift, but
+not the rest. The test photos are from unseen devices with different sharpness/noise/colour after resampling (H5,
+notebook C11: test→train feature distance 3.3× the LOSO distance), and the mean-curve baseline itself is 14 EMD
+worse on the LB than in CV (102.4 vs 88.3), so the test *soils* differ as well. The models that fit the fewest
+parameters to the training images (handcrafted + ridge, frozen features + ridge) lose the least of their CV gain.
+Whole-photo models may also have scored better on the LB by using the whole field of view (more context per
+prediction), which tiling throws away.
 
 **H1.2 (4 px/mm, 224-px tiles = 56 mm is a sensible default).** *Prediction:* LOSO EMD of frozen ConvNeXt with
 tiles ≤ the whole-photo result (35.9). The error moves to the fine end of the curve, and the coarse end improves
@@ -151,6 +154,9 @@ statistics. A randomly initialised ViT with a curve head initialised at the mean
 0.05 and drop-path 0.1 can fit a few global statistics in 10 epochs, and that is all the task rewards on 24
 samples. ImageNet pretraining mostly adds object-level features that this task does not use. So "pretraining
 matters more for ViTs than for CNNs" holds for tasks that need spatial structure, and this data set barely does.
+*Leaderboard (post-hoc):* the own scratch ViT is the **worst** submitted model on the public LB (92.31, vs 81.47 for
+frozen DeiT-S + ridge and 76.55 for frozen MAE-B + ridge). So in CV, on the training devices, pretraining did not
+matter, but on the unseen test devices it did: the scratch ViT fitted the appearance of the training phones.
 
 ## H5: colour normalisation and domain shift (before C12)
 
@@ -183,6 +189,11 @@ deep-feature runs compared in C10, and it has the lowest std of all 24-fold runs
 | grayscale | 42.78 | colour helps (+2.9, mostly fine and sand) |
 | shuffle all pixels (colour histogram only) | 43.41 | the colour histogram alone gives most of the signal |
 | metadata only (scale, device, tile position) | 86.69 / 88.52 | = mean curve: no scale/device shortcut |
+
+*Leaderboard (post-hoc):* handcrafted ridge is the **best** submitted model on the public LB (65.16, vs 76.55 for
+the best deep model and 102.37 for the mean curve). It keeps 75 % of its CV gain over the mean curve on the test
+set, while the deep models keep 20–51 %. 22 global statistics + a ridge head cannot fit much of the training
+devices' appearance. Only 10 test samples, so this is a hint, not proof.
 
 ## H7: continued DINO on tiles, scale-safe vs resize (before C16/C17)
 

@@ -4,7 +4,7 @@ P1 frozen CNN (MLP-EMD head),convnext_t_frozen_t224,CNN,24,41.29,33.78,30.49,55.
 P1 frozen CNN (MLP-EMD head),convnextv2b_frozen_t224,CNN,24,41.12,31.61,35.2,56.93,44.9,30.33,,,22,,,41.12 ± 31.61
 P1 frozen CNN (MLP-EMD head),convnext_t_frozen_t384,CNN,24,41.14,33.34,31.18,51.55,53.37,29.97,,,22,,,41.14 ± 33.34
 P1 frozen CNN (MLP-EMD head),convnext_t_frozen_t224_sgd,CNN,24,39.43,32.14,29.17,50.9,48.33,29.03,,,22,,,39.43 ± 32.14
-P1 frozen CNN (MLP-EMD head),r18_frozen_t224,CNN,24,36.57,27.83,29.7,42.12,46.58,29.16,0.04,,22,,,36.57 ± 27.83
+P1 frozen CNN (MLP-EMD head),r18_frozen_t224,CNN,24,36.57,27.83,29.7,42.12,46.58,29.16,0.04,,22,89.85518,,36.57 ± 27.83
 P1 CNN fine-tuning,convnext_t_ft_t224,CNN,24,41.71,33.35,32.5,53.58,52.23,30.4,0.629,4.57,25,,,41.71 ± 33.35
 P2/P3 frozen ViT/SSL (MLP-EMD head),vits_sup_frozen_avgcat,ViT,24,40.88,31.91,30.59,53.26,48.58,30.46,,,34,,,40.88 ± 31.91
 P2/P3 frozen ViT/SSL (MLP-EMD head),dinov2s_frozen_avgcat,SSL,24,42.66,30.93,35.3,59.35,52.54,28.8,,,34,,,42.66 ± 30.93
@@ -36,14 +36,14 @@ H5 colour normalisation,vits_sup_ridge_gw_t224,ViT,24,41.83,30.47,32.87,55.01,47
 H5 colour normalisation,dinov2s_ridge_reinhard_t224,SSL,24,41.41,31.14,36.52,54.86,46.6,31.41,0.025,,57,,,41.41 ± 31.14
 H5 colour normalisation,vits_sup_ridge_reinhard_t224,ViT,24,42.58,30.25,32.64,54.85,49.06,32.73,0.039,,57,,,42.58 ± 30.25
 P2 ViT from scratch,vits_scratch_t224,ViT (scratch),24,37.73,32.01,23.51,47.17,37.18,32.45,0.53,,60,,,37.73 ± 32.01
-P2 own ViT from scratch,own_vit_s_scratch_t224,ViT (scratch),24,37.4,29.28,25.91,45.72,35.97,33.14,0.54,,61,,,37.40 ± 29.28
-P2 DeiT/Swin/MaxViT frozen + ridge/kNN,deit_s_ridge_t224,ViT,24,38.61,28.26,30.84,51.99,47.35,27.16,0.02,,62,,,38.61 ± 28.26
+P2 own ViT from scratch,own_vit_s_scratch_t224,ViT (scratch),24,37.4,29.28,25.91,45.72,35.97,33.14,0.54,,61,92.3058,,37.40 ± 29.28
+P2 DeiT/Swin/MaxViT frozen + ridge/kNN,deit_s_ridge_t224,ViT,24,38.61,28.26,30.84,51.99,47.35,27.16,0.02,,62,81.47181,,38.61 ± 28.26
 P2 DeiT/Swin/MaxViT frozen + ridge/kNN,deit_s_knn_t224,ViT,24,40.02,30.27,32.52,50.4,49.46,30.04,,,62,,,40.02 ± 30.27
 P2 DeiT/Swin/MaxViT frozen + ridge/kNN,swin_t_ridge_t224,ViT,24,38.7,29.45,25.12,52.13,46.79,27.5,0.04,,62,,,38.70 ± 29.45
 P2 DeiT/Swin/MaxViT frozen + ridge/kNN,swin_t_knn_t224,ViT,24,39.26,29.16,31.45,50.24,47.8,29.3,,,62,,,39.26 ± 29.16
 P2 DeiT/Swin/MaxViT frozen + ridge/kNN,maxvit_t_ridge_t224,ViT,24,41.39,29.76,34.14,56.89,50.21,28.66,,,62,,,41.39 ± 29.76
 P2 DeiT/Swin/MaxViT frozen + ridge/kNN,maxvit_t_knn_t224,ViT,24,40.19,30.0,32.68,55.72,45.5,28.91,,,62,,,40.19 ± 30.00
-P4 shortcut control: handcrafted,handcrafted_ridge_t224,control,24,38.82,22.81,36.2,47.0,46.26,30.95,0.001,,65,,,38.82 ± 22.81
+P4 shortcut control: handcrafted,handcrafted_ridge_t224,control,24,38.82,22.81,36.2,47.0,46.26,30.95,0.001,,65,65.15639,,38.82 ± 22.81
 P4 shortcut control: handcrafted,handcrafted_knn_t224,control,24,39.61,26.93,29.76,52.84,47.33,28.67,0.0,,65,,,39.61 ± 26.93
 P4 shortcut controls,ctrl_gray_vits_ridge,ViT,24,42.78,31.61,32.04,54.56,54.45,31.04,,,71,,,42.78 ± 31.61
 P4 shortcut controls,ctrl_shuffle_patches_vits_ridge,ViT,24,39.73,28.52,30.07,51.34,49.4,28.92,,,71,,,39.73 ± 28.52

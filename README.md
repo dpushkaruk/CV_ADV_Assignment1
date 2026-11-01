@@ -17,10 +17,12 @@ from smartphone photos of a soil sample with a known physical scale, predict the
 * The most important finding: **handcrafted colour/texture statistics (38.8), a ViT trained from scratch (37.4) and
   ImageNet / SSL backbones (37–45) are indistinguishable**, and shuffling 32-px patches does not hurt. The signal on
   this data set is global colour/texture statistics of the tile, not learned grain shape.
-* **CV and LB disagree strongly** (CV 37.8–39.3 vs public LB 76.6–86.7 for the three submitted runs; the mean-curve
-  baseline is 88.3 in CV and 102.4 on the LB). The models still beat the constant on the test set by 16–26 EMD, about
-  half of their CV gain. The test photos come from two iPhones that never appear in train, and the test soils differ
-  from the training soils. See [CV vs LB](#cv-vs-leaderboard).
+* **CV and LB disagree strongly** (CV 35.7–39.3 vs public LB 65.2–92.3 for the eight submitted models; the mean-curve
+  baseline is 88.3 in CV and 102.4 on the LB). The CV order does not predict the LB order (Spearman −0.12): the two best
+  models by CV (ResNet-18 frozen, own ViT from scratch) are the two worst on the LB, and the handcrafted colour/texture
+  model is the best (65.16). All models still beat the constant on the test set, by 10–37 EMD instead of 49–53 in CV.
+  The test photos come from two iPhones that never appear in train, and the test soils differ from the training soils.
+  The final CV-selected ensemble scores 77.51. See [CV vs LB](#cv-vs-leaderboard).
 
 All experiments are in [`notebooks/cv-v3.ipynb`](notebooks/cv-v3.ipynb) (one Kaggle run, T4, 9.2 h). The hypotheses
 log is in [`HYPOTHESES.md`](HYPOTHESES.md), every CV score in [`results/cv_results.csv`](results/cv_results.csv),
@@ -44,7 +46,8 @@ scripts/predict.py             inference: photo(s) + px/mm -> valid grain-size c
 scripts/build_results_table.py CV + LB -> results/results_table.{csv,md}
 results/cv_results.csv         CV of all 101 runs (mean ± std, median, per soil class, GPU-h / peak memory where logged)
 results/folds.csv              the LOSO folds used by every experiment
-results/lb_scores.csv          Public / Private LB per submitted file
+results/lb_scores.csv          Public LB of all 10 submitted files
+submissions/                   the 5 submission CSVs of 2026-11-01 (final ensemble = sub_best.csv)
 artifacts/README.md            where OOF predictions, checkpoints and the compute log are stored
 HYPOTHESES.md                  hypotheses log (written before each block, results after)
 AI_USAGE.md                    disclosure of AI-tool use
@@ -351,9 +354,22 @@ CLS attention (ViT-S FT and DINOv2-S FT) on the same median-contrast tile of 5 s
 easiest samples of the first frozen CNN run, chosen from OOF errors and not by hand. The maps are saved as
 `interpretation_maps.png`. On the hard samples (H038 gravel, H126 and H405 fine), the tile-level EMD is 45–142 for all
 three approaches, and on the easy gravels (H371, H372) it is 5–19.
-> **TODO (DP): describe the maps from `interpretation_maps.png`** (do they focus on grains, on the background, or
-> spread over the whole tile; do failure cases look different from the successes). The numeric controls below
-> already show that a global, layout-free decision is enough.
+![Grad-CAM, attention rollout and last-layer attention](figures/interpretation_maps.png)
+
+What the maps show:
+* **CNN Grad-CAM** gives 2–4 broad blobs per tile. On the hard tiles they sit at the tile edges and corners
+  (H038 top-right, H126 bottom-left, H405 left edge), not on particular grains. On the easy gravels they cover a
+  large stone (H371) and, on H372, also the dark container rim at the top of the tile, i.e. background.
+* **ViT rollout** is scattered over the whole tile in small spots; **ViT last-layer CLS attention** is concentrated
+  on 3–6 single tokens that do not line up with grain boundaries.
+* **SSL (DINOv2) rollout** collapses onto one or two single tokens on every tile, so it says almost nothing.
+  **SSL last-layer attention** is the opposite: spread over the whole tile, following the stone bodies and edges on
+  the gravel tiles and a fine speckle on the fine/sand tiles.
+* **Failures vs successes.** The hard tiles (H038, H126, H405) are uniform fine/mixed texture without large
+  objects, and all maps there are diffuse or sit at the tile border. On the easy gravels the CNN and the SSL maps
+  land on the large stones. None of the three approaches shows a localised, grain-by-grain decision; together with
+  the controls below this points to a decision made from global colour/texture of the tile. One caveat: Grad-CAM
+  on H372 reacts to the container rim, so non-soil background inside a tile can influence the prediction.
 
 **Shortcut control experiments** (ridge on frozen ViT-S features of perturbed tiles, same LOSO folds, plus
 non-image controls):
@@ -469,21 +485,27 @@ The diverse pair is as good as top-4 with half the members and a lower std, beca
 
 ## CV vs leaderboard
 
-| submission | CV (24 folds) | Public LB | improvement over mean curve: CV / LB | Private LB |
-|---|---|---|---|---|
-| maeb_ridge_t224 (SSL, frozen + ridge) | 37.81 | **76.55** | −50.5 / **−25.8** | TBD |
-| dinov2s_ft_llrd_t224 (SSL, fine-tuned) | 39.30 | 83.05 | −49.0 / −19.3 | TBD |
-| effb0_frozen_t224 (CNN, frozen + MLP) | 39.26 | 86.73 | −49.1 / −15.6 | TBD |
-| mean training curve (baseline) | 88.32 | 102.37 | 0 / 0 | TBD |
-| uniform curve (baseline) | 98.61 | 125.63 | | TBD |
-| final ensemble (r18 + handcrafted) | 35.65 | TBD | | TBD |
+| submission | CV (24 folds) | Public LB | improvement over mean curve: CV / LB |
+|---|---|---|---|
+| handcrafted_ridge_t224 (22 colour/texture stats + ridge) | 38.82 | **65.16** | −49.5 / **−37.2** |
+| maeb_ridge_t224 (SSL, frozen + ridge) | 37.81 | 76.55 | −50.5 / −25.8 |
+| **final ensemble** (r18 + handcrafted, `submission.csv`, submitted as `sub_best.csv`) | **35.65** | 77.51 | −52.7 / −24.9 |
+| deit_s_ridge_t224 (ViT, frozen + ridge) | 38.61 | 81.47 | −49.7 / −20.9 |
+| dinov2s_ft_llrd_t224 (SSL, fine-tuned) | 39.30 | 83.05 | −49.0 / −19.3 |
+| effb0_frozen_t224 (CNN, frozen + MLP) | 39.26 | 86.73 | −49.1 / −15.6 |
+| r18_frozen_t224 (CNN, frozen + MLP) | 36.57 | 89.86 | −51.7 / −12.5 |
+| own_vit_s_scratch_t224 (ViT from scratch) | 37.40 | 92.31 | −50.9 / −10.1 |
+| mean training curve (baseline) | 88.32 | 102.37 | 0 / 0 |
+| uniform curve (baseline) | 98.61 | 125.63 | |
+
+All 10 submissions of the team are listed. The private LB is published only after the competition closes.
 
 **What the baselines show.** Even the constant predictions score 16–27 EMD worse on the LB than in CV
 (mean curve 102.4 vs 88.3, uniform 125.6 vs 98.6). So the test samples are farther from the training curves than the
 training samples are from each other: part of the gap is a **label shift** (other soils / sites: Airbus, Kleinkummerfeld,
 Münster, Audorfring, Lidl WHV), not only an image shift. Against the right reference, the models do transfer: they
-beat the mean curve on the test set by 16–26 EMD (15–25 %), but in CV they beat it by 49–51 (≈ 56 %).
-So roughly half of the CV gain survives on the test devices.
+beat the mean curve on the test set by 10–37 EMD (10–36 %), but in CV they beat it by 49–53 (≈ 57 %).
+So between a fifth and three quarters of the CV gain survives on the test devices, depending on the model.
 
 **Why the rest is lost.** The test photos come from two iPhones (14 / 16, 14–20 px/mm) that never appear in train
 (4.6 px/mm for 97 % of the train photos). After resampling to 4 px/mm they have a different sharpness, noise and
@@ -491,13 +513,17 @@ colour balance. In DINOv2-S feature space, the median test→train nearest-neigh
 train→train distance, and 9 of 10 test samples lie beyond the 90th percentile of the LOSO distances (notebook C11).
 LOSO measures generalisation to new samples from the *same* devices only.
 
-**Ranking.** The LB order (MAE ridge < DINOv2 FT < EfficientNet frozen) differs from the CV order (all three within
-1.5 EMD, inside the noise). The run that transfers best is the frozen encoder with the most strongly regularised head
-(ridge on MAE features), and the fine-tuned model sits in between. That is consistent with the CKA result:
-fine-tuning distorts features on the training domain only. The public LB is a part of only 10 samples, so these
-differences are not significant either, and the LB was **not** used for model selection: the final submission is
-the CV-selected ensemble. The full table (all runs, CV ± std, LB, GPU-h, peak memory) is in
-[`results/results_table.md`](results/results_table.md).
+**Ranking.** The LB order is unrelated to the CV order (Spearman −0.12 over the 8 models, while all CV scores lie
+within 3.7 EMD, inside the noise). The pattern is about *how much the model fits the training images*: the
+handcrafted features with a ridge head (65.2) and the frozen SSL/ViT features with a ridge head (76.6, 81.5) transfer
+best, the frozen features with a trained MLP head and the fine-tuned model are in the middle (83–90), and the ViT
+trained from scratch on 24 samples is the worst (92.3). The more parameters were fitted to the training devices, the
+more of the CV gain is lost. This is consistent with the CKA result (fine-tuning distorts features on the training
+domain only) and with H5 (test images are far from the training images in feature space). It also explains the final
+ensemble: it is the plain mean of the worst (r18, 89.9) and the best (handcrafted, 65.2) model on the LB and lands
+between them (77.5). The public LB is a part of only 10 samples, so these differences are not significant either, and
+the LB was **not** used for model selection: the final submission is the CV-selected ensemble. The full table (all
+runs, CV ± std, LB, GPU-h, peak memory) is in [`results/results_table.md`](results/results_table.md).
 
 ---
 
@@ -534,7 +560,8 @@ expensive: ConvNeXt-T FT 0.63 h / 4.6 GB, DINOv2-S FT 0.58 h / 3.6 GB, MAE-B FT 
   iPhone sharpness/noise after resampling) or resampling the test photos through the training devices' processing
   would be the first thing to try.
 * Ablations ran on 8 folds to fit the GPU budget.
-* Block 1 hypotheses (tiling, H1.1–H1.4) were committed on 2026-10-26 before the tiled runs. H1–H7 were written in the
+* Block 1 hypotheses (tiling, H1.1–H1.4) were committed on 2026-10-26 before the tiled runs, in the earlier
+  repository `dpushkaruk/cv_adv_ass1`. H1–H7 were written in the
   notebook before their blocks but committed to git only with the results (see HYPOTHESES.md).
 
 ## AI tools
