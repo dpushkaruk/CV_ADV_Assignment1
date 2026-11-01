@@ -48,10 +48,7 @@ results/cv_results.csv         CV of all 101 runs (mean ± std, median, per soil
 results/folds.csv              the LOSO folds used by every experiment
 results/lb_scores.csv          Public LB of all 10 submitted files
 submissions/                   the 5 submission CSVs of 2026-11-01 (final ensemble = sub_best.csv)
-artifacts/README.md            where OOF predictions, checkpoints and the compute log are stored
 HYPOTHESES.md                  hypotheses log (written before each block, results after)
-AI_USAGE.md                    disclosure of AI-tool use
-HANDBOOK.md                    handover: remaining steps, key numbers, likely defense questions (UA)
 ```
 
 ### Reproduce
@@ -564,6 +561,3 @@ expensive: ConvNeXt-T FT 0.63 h / 4.6 GB, DINOv2-S FT 0.58 h / 3.6 GB, MAE-B FT 
   repository `dpushkaruk/cv_adv_ass1`. H1–H7 were written in the
   notebook before their blocks but committed to git only with the results (see HYPOTHESES.md).
 
-## AI tools
-
-See [AI_USAGE.md](AI_USAGE.md).
