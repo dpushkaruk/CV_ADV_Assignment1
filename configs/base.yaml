@@ -1,0 +1,58 @@
+# Shared settings of every experiment (mirrors CFG in notebooks/cv-v3.ipynb).
+# Per-run overrides are in configs/experiments.yaml; the exact config of every run is also
+# written by the notebook to experiments/<run_id>/config.json.
+
+data:
+  dir: /kaggle/input/competitions/soil-grain-size-from-photos
+  train_img: Training-All_Photos_updated/Training-All_Photos_updated
+  test_img: Test_All_Photos/Test_All_Photos
+  labels: Training_labels_updated.csv
+  ppm: ppm_updated.csv
+  sample_submission: sample_submission.csv
+  output_dir: /kaggle/working
+
+seed: 42
+grain_cols: ["0.002", "0.0063", "0.02", "0.063", "0.2", "0.63", "2", "6.3", "20", "63", "200"]
+
+tiling:
+  px_per_mm: 4            # train Motorola photos are ~4.6 px/mm: 4 never upsamples any photo
+  tile_sizes: [224, 384]  # 56 mm and 96 mm
+  grid: hard-centred      # no overlap
+  workers: 4
+
+validation:
+  scheme: LOSO            # leave-one-sample-out over the 24 physical samples
+  folds_file: results/folds.csv
+  ablation_folds: 8       # stratified subset (soil class x D50) used for the ablation blocks
+  aggregation: tile -> mean per photo -> mean per sample -> monotone, clipped curve
+
+training:
+  feat_epochs: 60         # head on cached frozen features
+  epochs: 10              # fine-tuning on tile images
+  warmup_epochs: 1
+  feat_batch_size: 256
+  batch_size: 64
+  lr: 1.0e-3              # head
+  backbone_lr: 1.0e-5
+  weight_decay: 1.0e-4    # not applied to biases / norm params / pos_embed / cls_token
+  precision: 16-mixed
+  gradient_clip: 1.0
+  loss: EMD (L1 between CDFs weighted by log-bin widths)
+  tta: 4 dihedral views (id, h-flip, v-flip, rot90)
+
+augmentation:             # scale-safe only: nothing that changes mm per pixel
+  - HorizontalFlip(p=0.5)
+  - VerticalFlip(p=0.5)
+  - RandomRotate90(p=0.5)
+  - RandomBrightnessContrast(0.15, 0.15, p=0.5)
+  - HueSaturationValue(5, 10, 10, p=0.3)
+
+sklearn_heads:
+  ridge_alphas: [1, 10, 100, 1000, 10000, 100000]   # chosen per fold by inner GroupKFold(4) on training samples
+  knn: {k: 20, tau: 0.1}
+
+inference:
+  backbone: vit_base_patch16_224.mae
+  pool: avgcat            # CLS + mean patch token
+  head: ridge
+  default_alpha: 1000

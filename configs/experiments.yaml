@@ -1,0 +1,120 @@
+# Every reported experiment = one call of run_loso / run_loso_sklearn / run_sub in notebooks/cv-v3.ipynb.
+# Values not listed come from configs/base.yaml. The notebook also writes the full resolved config of every run
+# to experiments/<run_id>/config.json (Kaggle output, see artifacts/README.md).
+#
+# Shorthands (exact timm weights, all public):
+#   R18      resnet18.a1_in1k
+#   EFFB0    tf_efficientnet_b0.ns_jft_in1k
+#   CNXT     convnext_tiny.fb_in22k_ft_in1k
+#   CNXV2B   convnextv2_base.fcmae_ft_in22k_in1k
+#   VITS     vit_small_patch16_224.augreg_in21k_ft_in1k
+#   P32      vit_small_patch32_224.augreg_in21k_ft_in1k
+#   DEIT_S   deit_small_patch16_224.fb_in1k
+#   SWIN_T   swin_tiny_patch4_window7_224.ms_in22k_ft_in1k
+#   MAXVIT_T maxvit_tiny_tf_224.in1k
+#   DINO_S   vit_small_patch14_dinov2.lvd142m      (img_size 224)
+#   DINO_B   vit_base_patch14_dinov2.lvd142m       (img_size 224)
+#   D3       vit_small_patch16_dinov3.lvd1689m
+#   MAEB     vit_base_patch16_224.mae
+#   scratch  vit_small_patch16_224 (random init) / own_vit_s16 (OwnViT, Lecture-1 style)
+
+defaults:
+  frozen: {freeze_backbone: true, epochs: 60, lr: 1.0e-3, batch_size: 256, head: mlp_emd, tile_px: 224}
+  sklearn: {head: ridge | knn, alphas: [1, 10, 100, 1000, 10000, 100000], k: 20, tau: 0.1, target: curve}
+  vit_ft: {freeze_backbone: false, epochs: 8, lr: 1.0e-3, backbone_lr: 1.0e-4, weight_decay: 0.05,
+           llrd: 0.75, drop_path: 0.1, pool: cls, optimizer: adamw, warmup_epochs: 1}
+  sub: {subset: true, folds: 8, epochs: 8}   # ablation folds: F827 G190 H037 H183 H366 H368 H516 H666
+
+part1_cnn:
+  frozen:
+    - {name: r18_frozen_t224, backbone: R18}
+    - {name: effb0_frozen_t224, backbone: EFFB0}
+    - {name: convnext_t_frozen_t224, backbone: CNXT}
+    - {name: convnextv2b_frozen_t224, backbone: CNXV2B}
+    - {name: convnext_t_frozen_t384, backbone: CNXT, tile_px: 384}
+    - {name: convnext_t_frozen_t224_sgd, backbone: CNXT, optimizer: sgd, lr: 1.0e-2}
+  finetune:
+    - {name: convnext_t_ft_t224, backbone: CNXT, freeze_backbone: false, epochs: 8, backbone_lr: 2.0e-5, freeze_bn: true}
+  ablations_resnet18:   # use: sub, freeze_backbone false, backbone_lr 1e-4, AdamW, frozen BN unless stated
+    - {name: sub_r18_adamw_frozenbn}
+    - {name: sub_r18_adamw_trainbn, freeze_bn: false}
+    - {name: sub_r18_grouped_frozenbn, group_batches: 2}
+    - {name: sub_r18_grouped_trainbn, freeze_bn: false, group_batches: 2}
+    - {name: sub_r18_groupnorm, backbone: resnet18_gn}          # BN -> GroupNorm(32), pretrained affine kept
+    - {name: sub_r18_sgd, optimizer: sgd, lr: 1.0e-2, backbone_lr: 1.0e-3}
+    - {name: sub_r18_nowarmup, warmup_epochs: 0}
+    - {name: sub_r18_noaug, aug: false}
+    - {name: sub_r18_t384, tile_px: 384}
+
+part2_vit:
+  frozen:
+    - {name: vits_sup_frozen_avgcat, backbone: VITS, pool: avgcat}
+    - {name: vits_sup_frozen_cls, backbone: VITS, pool: cls}
+    - {name: vits_sup_ridge_t224, backbone: VITS, use: sklearn, head: ridge, pool: avgcat}
+    - {name: vits_sup_knn_t224, backbone: VITS, use: sklearn, head: knn, pool: avgcat}
+    - {name: vits_sup_ridge_t384, backbone: VITS, use: sklearn, head: ridge, tile_px: 384, img_size: 384}
+    - {name: "deit_s_{ridge,knn}_t224", backbone: DEIT_S, use: sklearn}
+    - {name: "swin_t_{ridge,knn}_t224", backbone: SWIN_T, use: sklearn}
+    - {name: "maxvit_t_{ridge,knn}_t224", backbone: MAXVIT_T, use: sklearn}
+  finetune:
+    - {name: vits_sup_ft_llrd_t224, backbone: VITS, use: vit_ft}
+  scratch:
+    - {name: vits_scratch_t224, backbone: scratch, epochs: 10, lr: 1.0e-3, backbone_lr: 5.0e-4, weight_decay: 0.05, llrd: null}
+    - {name: own_vit_s_scratch_t224, backbone: own_vit_s16, epochs: 10, lr: 1.0e-3, backbone_lr: 5.0e-4, weight_decay: 0.05, llrd: null}
+  ablations_vits:       # use: [vit_ft, sub]; baseline vits_sup_ft_llrd_t224 restricted to the same 8 folds
+    - {name: sub_vits_nollrd, llrd: null}
+    - {name: sub_vits_dp0, drop_path: 0.0}
+    - {name: sub_vits_wd1e4, weight_decay: 1.0e-4}
+    - {name: sub_vits_nowarmup, warmup_epochs: 0}
+    - {name: sub_vits_noaug, aug: false}
+    - {name: sub_vits_patch32, backbone: P32}
+    - {name: sub_deit_s_ft, backbone: DEIT_S}
+    - {name: sub_swin_t_ft, backbone: SWIN_T, llrd: null}
+
+part3_ssl:
+  frozen:
+    - {name: "dinov2s_frozen_{avgcat,cls}", backbone: DINO_S}
+    - {name: dinov2b_frozen_avgcat, backbone: DINO_B}
+    - {name: dinov3s_frozen_avgcat, backbone: D3}
+    - {name: maeb_frozen_avgcat, backbone: MAEB}
+    - {name: "{dinov2s,dinov2b,dinov3s,maeb}_{ridge,knn}_t224", use: sklearn, pool: avgcat}
+  finetune:
+    - {name: dinov2s_ft_llrd_t224, backbone: DINO_S, use: vit_ft}
+  strategies:           # use: [vit_ft, sub]; lora: rank 8, alpha 16, qkv + proj, backbone_lr 5e-4; lpft: 40 LP epochs then FT
+    - {name: sub_dinov2s_lpft, backbone: DINO_S, strategy: lpft}
+    - {name: sub_dinov2s_lora, backbone: DINO_S, strategy: lora}
+    - {name: sub_dinov3s_ft, backbone: D3, strategy: ft}
+    - {name: sub_dinov3s_lora, backbone: D3, strategy: lora}
+    - {name: sub_vits_lpft, backbone: VITS, strategy: lpft}
+    - {name: sub_vits_lora, backbone: VITS, strategy: lora}
+    - {name: sub_maeb_ft, backbone: MAEB, strategy: ft}
+  domain_adaptation:    # continued DINO on the 546 unlabelled 384-px TRAIN tiles, 60 epochs, bs 32, 2 global 224 + 4 local 98 crops
+    common: {backbone: DINO_S, epochs: 60, batch_size: 32, n_local: 4, ema: 0.996, prototypes: 2048, head_warmup_epochs: 3}
+    runs:
+      - {tag: dinov2s_cdino_safe, scale_safe: true, backbone_lr: 2.0e-5, head_lr: 5.0e-4, t_temp: [0.04, 0.04]}
+      - {tag: dinov2s_cdino_resize, scale_safe: false, backbone_lr: 2.0e-5, head_lr: 5.0e-4, t_temp: [0.04, 0.04]}
+      - {tag: dinov2s_cdino_safe_anchor, scale_safe: true, backbone_lr: 1.0e-5, head_lr: 1.0e-4, t_temp: [0.04, 0.07], anchor_w: 1.0}
+    evaluation:
+      - {name: "{tag}_{ridge,knn}_t224", use: sklearn, pool: avgcat}
+      - {name: "sub_{dinov2s_cdino_safe,dinov2s_cdino_safe_anchor}_{ft,lora}", use: [vit_ft, sub], llrd: 0.75}
+
+part0_extra:
+  alternative_target:
+    - {name: "alt_{maeb,effb0,vits_sup}_{ridge,knn}_quantile_t224", use: sklearn, target: quantile}
+  tile_resolution:
+    - {name: "ppm{2,3}_{effb0,vits_sup}_{ridge,knn}_t224", px_per_mm: [2, 3], use: sklearn}
+
+part4_controls:         # ridge on frozen VITS avgcat features of perturbed tiles, same LOSO folds
+  - {name: ctrl_gray_vits_ridge, perturbation: grayscale}
+  - {name: ctrl_shuffle_patches_vits_ridge, perturbation: shuffle 32-px patches}
+  - {name: ctrl_shuffle_pixels_vits_ridge, perturbation: shuffle all pixels}
+  - {name: ctrl_blur_vits_ridge, perturbation: gaussian blur r=2}
+  - {name: "ctrl_meta_{ridge,knn}", features: [resample factor, ppm_eff, tile x, tile y, device one-hot]}
+  - {name: "handcrafted_{ridge,knn}_t224", features: 22 colour / HSV / gradient / Laplacian statistics per tile}
+  - {name: "{dinov2s,vits_sup}_ridge_{gw,reinhard}_t224", colour_normalisation: [gray-world, reinhard]}
+
+part6_data_efficiency:
+  - {name: "de_{effb0,vits_sup,dinov2s,maeb}_f{25,50,100}_s{0,1,2}", use: sklearn, head: ridge, alphas: [1000], train_frac: [0.25, 0.5, 1.0]}
+
+part7_ensemble:
+  final: {members: [r18_frozen_t224, handcrafted_ridge_t224], weights: equal, selection: diverse greedy by CV}

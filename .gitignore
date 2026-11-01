@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.ipynb_checkpoints/
+
+# generated on Kaggle, never committed
+tiles/
+features/
+experiments/
+working/
+*.npy
+*.pt
+*.ckpt
+*.zip

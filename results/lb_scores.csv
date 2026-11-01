@@ -1,0 +1,14 @@
+run,submission_file,lb_public,lb_private,note
+effb0_frozen_t224,submission_effb0_frozen_t224.csv,86.72682,,submitted 2026-10-29
+maeb_ridge_t224,submission_maeb_ridge_t224.csv,76.55106,,submitted 2026-10-29
+dinov2s_ft_llrd_t224,submission_dinov2s_ft_llrd_t224.csv,83.05089,,submitted 2026-10-29
+baseline_meancurve,submission_baseline_meancurve.csv,102.37237,,submitted 2026-10-29
+baseline_uniform,submission_baseline_uniform.csv,125.63436,,submitted 2026-10-29
+r18_frozen_t224,submission_r18_frozen_t224.csv,,,TODO best single by CV
+own_vit_s_scratch_t224,submission_own_vit_s_scratch_t224.csv,,,TODO
+deit_s_ridge_t224,submission_deit_s_ridge_t224.csv,,,TODO best ViT by CV
+handcrafted_ridge_t224,submission_handcrafted_ridge_t224.csv,,,TODO
+convnext_t_ft_t224,submission_convnext_t_ft_t224.csv,,,TODO
+vits_sup_ft_llrd_t224,submission_vits_sup_ft_llrd_t224.csv,,,TODO
+ens_final,submission.csv,,,TODO final = r18_frozen_t224 + handcrafted_ridge_t224 (chosen by CV)
+ens_cnn_vit_ssl,submission_ens_cnn_vit_ssl.csv,,,TODO
